@@ -131,4 +131,15 @@ describe("SeatbeltFile", () => {
     const roundtrippedFile = SeatbeltFile.fromJSON(json)
     assert.deepStrictEqual(roundtrippedFile.toJSON(), json)
   })
+
+  test("converts Windows backslashes to forward slashes", () => {
+    const windowsPath = "C:\\Users\\test\\Desktop\\eslint-seatbelt\\src\\SeatbeltFile.ts"
+    const expected = "C:/Users/test/Desktop/eslint-seatbelt/src/SeatbeltFile.ts"
+    assert.strictEqual(toPosixPath(windowsPath), expected)
+  })
+
+  test("preserves forward slashes in Unix paths", () => {
+    const unixPath = "/home/test/Desktop/eslint-seatbelt/src/SeatbeltFile.ts"
+    assert.strictEqual(toPosixPath(unixPath), unixPath)
+  })
 })
