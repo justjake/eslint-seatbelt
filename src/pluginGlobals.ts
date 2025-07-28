@@ -138,6 +138,14 @@ export function popFileArgs(filename: string): SeatbeltArgs {
     return args
   }
 
+  if (lastLintedFile?.filename === filename) {
+    // When there is a fatal TS error, eslint doesn't call configure.create() but still
+    // runs the postprocessor, i.e. `temporaryFileArgs` is empty when trying to get the
+    // args for the processed file. As a fallback, we try to use the once from the previous
+    // run.
+    return lastLintedFile.args
+  }
+
   if (!hasAnyEnvVars) {
     if (lastLintedFile) {
       logStderr(

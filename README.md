@@ -411,7 +411,6 @@ This project uses `pnpm` for package management.
 
 - [ ] Finish SEATBELT_THREADSAFE implementation
 - [ ] Set SEATBELT_DISABLE=1 during git merge/rebase events
-- [ ] Add SEATBELT_DISABLE_IN_EDITOR config option
 - [ ] Integration tests
 - [ ] Git merge driver to automatically resolve eslint.seatbelt.tsv conflicts
 

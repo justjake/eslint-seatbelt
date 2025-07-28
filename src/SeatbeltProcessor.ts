@@ -246,6 +246,10 @@ function maybeWriteStateUpdate(
   if (args.disable) {
     return
   }
+  // Used to disable updates but still run checks (the general `disable` turns off everything)
+  if (args.disableInEditor) {
+    return
+  }
   if (args.threadsafe) {
     // TODO: Implement locking
     // For now just refresh the file.

@@ -11,6 +11,7 @@ export const SEATBELT_KEEP = "SEATBELT_KEEP"
 export const SEATBELT_FILE = "SEATBELT_FILE"
 export const SEATBELT_PWD = "SEATBELT_PWD"
 export const SEATBELT_DISABLE = "SEATBELT_DISABLE"
+export const SEATBELT_DISABLE_IN_EDITOR = "SEATBELT_DISABLE_IN_EDITOR"
 export const SEATBELT_THREADSAFE = "SEATBELT_THREADSAFE"
 export const SEATBELT_VERBOSE = "SEATBELT_VERBOSE"
 export const SEATBELT_ROOT = "SEATBELT_ROOT"
@@ -22,6 +23,7 @@ const ENV_VARS = {
   SEATBELT_FILE,
   SEATBELT_PWD,
   SEATBELT_DISABLE,
+  SEATBELT_DISABLE_IN_EDITOR,
   SEATBELT_THREADSAFE,
   SEATBELT_VERBOSE,
   SEATBELT_ROOT,
@@ -259,6 +261,11 @@ export interface SeatbeltConfig {
    */
   disable?: boolean
   /**
+   * Use this in your IDE config to block seatbelt from automatically updating
+   * the exceptions file when eslint is running during the `onType` event.
+   */
+  disableInEditor?: boolean
+  /**
    * By default seatbelt assumes that only one ESLint process will read and
    * write to the seatbelt file at a time.
    *
@@ -393,6 +400,11 @@ export const SeatbeltConfig = {
       config.disable = disable
       log?.(`${padVarName(SEATBELT_DISABLE)} config.disable =`, disable)
     }
+    const disableInEditor = SeatbeltEnv.readBooleanEnvVar(env[SEATBELT_DISABLE_IN_EDITOR])
+    if (disableInEditor !== undefined) {
+      config.disableInEditor = disableInEditor
+      log?.(`${padVarName(SEATBELT_DISABLE_IN_EDITOR)} config.disableInEditor =`, disableInEditor)
+    }
     const frozen = SeatbeltEnv.readBooleanEnvVar(env[SEATBELT_FROZEN])
     if (frozen !== undefined) {
       config.frozen = frozen
@@ -444,6 +456,7 @@ export interface SeatbeltEnv {
   [SEATBELT_PWD]?: string
   [SEATBELT_THREADSAFE]?: string
   [SEATBELT_DISABLE]?: string
+  [SEATBELT_DISABLE_IN_EDITOR]?: string
   [SEATBELT_FROZEN]?: string
   [SEATBELT_VERBOSE]?: string
   [SEATBELT_ROOT]?: string
@@ -513,6 +526,7 @@ export const SeatbeltArgs = {
           : new Set(config.allowIncreaseRules ?? []),
       frozen: config.frozen ?? false,
       disable: config.disable ?? false,
+      disableInEditor: config.disableInEditor ?? false,
       threadsafe: config.threadsafe ?? false,
       verbose: config.verbose ?? false,
     }

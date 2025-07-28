@@ -84,6 +84,14 @@ function parseArgs() {
         defaultValue: env.disable,
         optional: true,
       },
+      disableInEditor: {
+        type: Boolean,
+        description: escapeForChalk(
+          SeatbeltConfigSchema.properties.disableInEditor.description,
+        ),
+        defaultValue: env.disableInEditor,
+        optional: true,
+      },
       threadsafe: {
         type: Boolean,
         description: escapeForChalk(

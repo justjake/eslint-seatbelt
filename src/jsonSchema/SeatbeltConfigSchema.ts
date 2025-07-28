@@ -55,6 +55,11 @@ export const SeatbeltConfigSchema = {
         "Completely disable seatbelt error processing for a lint run while leaving it otherwise configured.\n\nThis can be set with the `SEATBELT_DISABLE` environment variable.\n\n```bash\nSEATBELT_DISABLE=1 eslint\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        disable: true,\n      }\n    }\n  }\n]\n```",
       type: "boolean",
     },
+    disableInEditor: {
+      description:
+        "Use this in your IDE config to block seatbelt from automatically updating\nthe exceptions file when eslint is running during the `onType` event.",
+      type: "boolean",
+    },
     threadsafe: {
       description:
         "By default seatbelt assumes that only one ESLint process will read and\nwrite to the seatbelt file at a time.\n\nThis should be set to `true` if you use a parallel ESLint runner similar to\njest-runner-eslint to avoid losing updates during parallel writes to the\nseatbelt file.\n\nWhen enabled, seatbelt creates temporary lock files to serialize updates to\nthe seatbelt file. This comes at a small performance cost.\n\nThis is enabled by default when run with Jest (environment variable `JEST_WORKER_ID` is set).\n\nIt can also be set with environment variable `SEATBELT_THREADSAFE`:\n\n```bash\nSEATBELT_THREADSAFE=1 eslint-parallel\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        threadsafe: true,\n      }\n    }\n  }\n]\n```",
