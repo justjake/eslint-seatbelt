@@ -84,6 +84,14 @@ function parseArgs() {
         defaultValue: env.disable,
         optional: true,
       },
+      quiet: {
+        type: Boolean,
+        description: escapeForChalk(
+          SeatbeltConfigSchema.properties.quiet.description,
+        ),
+        defaultValue: env.quiet,
+        optional: true,
+      },
       threadsafe: {
         type: Boolean,
         description: escapeForChalk(

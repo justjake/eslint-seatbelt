@@ -13,6 +13,7 @@ export const SEATBELT_PWD = "SEATBELT_PWD"
 export const SEATBELT_DISABLE = "SEATBELT_DISABLE"
 export const SEATBELT_THREADSAFE = "SEATBELT_THREADSAFE"
 export const SEATBELT_VERBOSE = "SEATBELT_VERBOSE"
+export const SEATBELT_QUIET = "SEATBELT_QUIET"
 export const SEATBELT_ROOT = "SEATBELT_ROOT"
 
 const ENV_VARS = {
@@ -24,6 +25,7 @@ const ENV_VARS = {
   SEATBELT_DISABLE,
   SEATBELT_THREADSAFE,
   SEATBELT_VERBOSE,
+  SEATBELT_QUIET,
   SEATBELT_ROOT,
   CI: "CI",
   JEST_WORKER_ID: "JEST_WORKER_ID",
@@ -259,6 +261,38 @@ export interface SeatbeltConfig {
    */
   disable?: boolean
   /**
+   * Suppress seatbelt's informational warning messages (e.g. "tend the garden",
+   * "thank you for fixing"). When enabled, seatbelt still downgrades errors to
+   * warnings and updates the seatbelt file, but the warning messages are not
+   * emitted as ESLint results. Over-limit errors and frozen-mode warnings are
+   * always preserved.
+   *
+   * This is useful when seatbelt warnings create noise in CI logs or editor
+   * integrations.
+   *
+   * This can be set with the `SEATBELT_QUIET` environment variable.
+   *
+   * ```bash
+   * SEATBELT_QUIET=1 eslint
+   * ```
+   *
+   * Or in ESLint config:
+   *
+   * ```js
+   * // in eslint.config.js
+   * const config = [
+   *   {
+   *     settings: {
+   *       seatbelt: {
+   *         quiet: true,
+   *       }
+   *     }
+   *   }
+   * ]
+   * ```
+   */
+  quiet?: boolean
+  /**
    * By default seatbelt assumes that only one ESLint process will read and
    * write to the seatbelt file at a time.
    *
@@ -419,6 +453,11 @@ export const SeatbeltConfig = {
         threadsafe,
       )
     }
+    const quiet = SeatbeltEnv.readBooleanEnvVar(env[SEATBELT_QUIET])
+    if (quiet !== undefined) {
+      config.quiet = quiet
+      log?.(`${padVarName(SEATBELT_QUIET)} config.quiet =`, quiet)
+    }
     const root = env[SEATBELT_ROOT]
     if (root) {
       config.root = root
@@ -446,6 +485,7 @@ export interface SeatbeltEnv {
   [SEATBELT_DISABLE]?: string
   [SEATBELT_FROZEN]?: string
   [SEATBELT_VERBOSE]?: string
+  [SEATBELT_QUIET]?: string
   [SEATBELT_ROOT]?: string
 }
 
@@ -513,6 +553,7 @@ export const SeatbeltArgs = {
           : new Set(config.allowIncreaseRules ?? []),
       frozen: config.frozen ?? false,
       disable: config.disable ?? false,
+      quiet: config.quiet ?? false,
       threadsafe: config.threadsafe ?? false,
       verbose: config.verbose ?? false,
     }

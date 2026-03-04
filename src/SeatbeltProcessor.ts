@@ -104,7 +104,8 @@ function createOnce<T>(): (value: T) => boolean {
   }
 }
 
-function transformMessages(
+/** @internal exported for testing */
+export function transformMessages(
   args: SeatbeltArgs,
   seatbeltFile: SeatbeltFile,
   filename: string,
@@ -124,7 +125,7 @@ function transformMessages(
     return messages
   }
 
-  return messages.map((message) => {
+  return messages.flatMap((message) => {
     if (message.ruleId === null) {
       SeatbeltArgs.verboseLog(
         args,
@@ -156,6 +157,9 @@ function transformMessages(
     } else if (errorCount > maxErrorCount) {
       if (allowIncrease) {
         // Rule is allowed to increase from 0 -> any, so it should become a warning.
+        if (args.quiet) {
+          return []
+        }
         return messageOverMaxErrorCountButIncreaseAllowed(
           message,
           errorCount,
@@ -185,10 +189,14 @@ function transformMessages(
         )
       }
 
+      if (args.quiet) {
+        return []
+      }
       return messageAtMaxErrorCount(message, errorCount)
     } else {
       if (args.frozen) {
         // We're frozen, so it's actually an error to decrease the error count.
+        // Frozen warnings are always shown, even in quiet mode.
         return messageFrozenUnderMaxErrorCount(
           message,
           filename,
@@ -197,6 +205,9 @@ function transformMessages(
         )
       }
       // Can tighten the seatbelt.
+      if (args.quiet) {
+        return []
+      }
       return messageUnderMaxErrorCount(message, errorCount, maxErrorCount)
     }
   })

@@ -54,6 +54,7 @@ describe("SeatbeltFile", () => {
       allowIncreaseRules: new Set(),
       frozen: false,
       disable: false,
+      quiet: false,
       threadsafe: false,
       verbose: false,
     }

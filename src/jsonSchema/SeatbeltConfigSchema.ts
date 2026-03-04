@@ -55,6 +55,11 @@ export const SeatbeltConfigSchema = {
         "Completely disable seatbelt error processing for a lint run while leaving it otherwise configured.\n\nThis can be set with the `SEATBELT_DISABLE` environment variable.\n\n```bash\nSEATBELT_DISABLE=1 eslint\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        disable: true,\n      }\n    }\n  }\n]\n```",
       type: "boolean",
     },
+    quiet: {
+      description:
+        'Suppress seatbelt\'s informational warning messages (e.g. "tend the garden",\n"thank you for fixing"). When enabled, seatbelt still downgrades errors to\nwarnings and updates the seatbelt file, but the warning messages are not\nemitted as ESLint results. Over-limit errors and frozen-mode warnings are\nalways preserved.\n\nThis is useful when seatbelt warnings create noise in CI logs or editor\nintegrations.\n\nThis can be set with the `SEATBELT_QUIET` environment variable.\n\n```bash\nSEATBELT_QUIET=1 eslint\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        quiet: true,\n      }\n    }\n  }\n]\n```',
+      type: "boolean",
+    },
     threadsafe: {
       description:
         "By default seatbelt assumes that only one ESLint process will read and\nwrite to the seatbelt file at a time.\n\nThis should be set to `true` if you use a parallel ESLint runner similar to\njest-runner-eslint to avoid losing updates during parallel writes to the\nseatbelt file.\n\nWhen enabled, seatbelt creates temporary lock files to serialize updates to\nthe seatbelt file. This comes at a small performance cost.\n\nThis is enabled by default when run with Jest (environment variable `JEST_WORKER_ID` is set).\n\nIt can also be set with environment variable `SEATBELT_THREADSAFE`:\n\n```bash\nSEATBELT_THREADSAFE=1 eslint-parallel\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        threadsafe: true,\n      }\n    }\n  }\n]\n```",
