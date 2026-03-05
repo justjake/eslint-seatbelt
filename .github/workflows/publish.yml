@@ -34,4 +34,4 @@ jobs:
 
       - run: pnpm test
 
-      - run: pnpm publish --no-git-checks --provenance
+      - run: npm publish --provenance --access public
