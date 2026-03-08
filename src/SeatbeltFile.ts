@@ -140,7 +140,7 @@ export class SeatbeltFile {
       }
       fileState.lines.push(line)
     })
-    return new SeatbeltFile(filename, data, comments.trim())
+    return new SeatbeltFile(toPosixPath(filename), data, comments.trim())
   }
 
   static fromJSON(json: SeatbeltFileJson): SeatbeltFile {
@@ -162,7 +162,7 @@ export class SeatbeltFile {
     protected data: Map<SourceFileName, SeatbeltStateFileData>,
     public readonly comments: string = "",
   ) {
-    this.filename = path.resolve(this.filename)
+    this.filename = toPosixPath(path.resolve(this.filename))
     this.dirname = path.dirname(this.filename)
   }
 
@@ -297,14 +297,21 @@ export class SeatbeltFile {
         // Serialize maxErrors map structure if it exists, since it may have changes.
         fileState.lines = []
         fileState.maxErrors.forEach((maxErrorCount, ruleId) => {
-          fileState.lines.push({ filename, ruleId, maxErrors: maxErrorCount })
+          fileState.lines.push({ 
+            filename: toPosixPath(filename), 
+            ruleId, 
+            maxErrors: maxErrorCount 
+          })
         })
         fileState.lines.sort((a, b) =>
           a.ruleId === b.ruleId ? 0 : a.ruleId < b.ruleId ? -1 : 1,
         )
       }
       fileState.lines.forEach((line) => {
-        const encoded = (line.encoded ??= encodeLine(line))
+        const encoded = (line.encoded ??= encodeLine({
+          ...line,
+          filename: toPosixPath(line.filename)
+        }))
         lines.push(encoded)
       })
     })
@@ -380,16 +387,16 @@ export class SeatbeltFile {
 
   toRelativePath(filename: string) {
     if (!nodePath.isAbsolute(filename)) {
-      return filename
+      return toPosixPath(filename)
     }
-    return nodePath.relative(this.dirname, filename)
+    return toPosixPath(nodePath.relative(this.dirname, filename))
   }
 
   toAbsolutePath(filename: string) {
     if (nodePath.isAbsolute(filename)) {
-      return filename
+      return toPosixPath(filename)
     }
-    return nodePath.resolve(this.dirname, filename)
+    return toPosixPath(nodePath.resolve(this.dirname, filename))
   }
 }
 
@@ -399,4 +406,15 @@ function parseMaxErrors(lines: SeatbeltFileLine[]): Map<RuleId, number> {
     maxErrors.set(line.ruleId, line.maxErrors)
   })
   return maxErrors
+}
+
+/**
+ * Converts a file path to POSIX format (forward slashes).
+ * This ensures consistent path representation across different operating systems.
+ * 
+ * @param filePath - The file path to convert
+ * @returns The POSIX-style path using forward slashes
+ */
+export function toPosixPath(filePath: string): string {
+  return filePath.split(path.sep).join(path.posix.sep)
 }
