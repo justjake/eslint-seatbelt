@@ -100,6 +100,87 @@ describe("SeatbeltFile", () => {
     await fs.promises.rm(tmpDir, { recursive: true })
   })
 
+  test("cleanUpRemovedFiles removes entries whose source file is gone", async () => {
+    const tmpDir = await fs.promises.mkdtemp(
+      path.join(os.tmpdir(), "seatbelt-cleanup-"),
+    )
+    const seatbeltFilename = path.join(tmpDir, "eslint.seatbelt.tsv")
+    const existingSrc = path.join(tmpDir, "existing.ts")
+    const goneSrc = path.join(tmpDir, "gone.ts")
+    fs.writeFileSync(existingSrc, "")
+    fs.writeFileSync(
+      seatbeltFilename,
+      [
+        `${JSON.stringify("existing.ts")}\t${JSON.stringify("rule1")}\t1\n`,
+        `${JSON.stringify("gone.ts")}\t${JSON.stringify("rule1")}\t2\n`,
+      ].join(""),
+    )
+
+    const args: SeatbeltArgs = {
+      root: tmpDir,
+      seatbeltFile: seatbeltFilename,
+      keepRules: new Set(),
+      allowIncreaseRules: new Set(),
+      frozen: false,
+      disable: false,
+      quiet: false,
+      threadsafe: false,
+      verbose: false,
+    }
+
+    const file = SeatbeltFile.openSync(seatbeltFilename)
+    const { removedFiles } = file.cleanUpRemovedFiles(args)
+
+    assert.strictEqual(removedFiles, 1)
+    const reread = SeatbeltFile.readSync(seatbeltFilename)
+    assert.ok(reread.getMaxErrors(existingSrc))
+    assert.strictEqual(reread.getMaxErrors(goneSrc), undefined)
+
+    await fs.promises.rm(tmpDir, { recursive: true })
+  })
+
+  test("threadsafe cleanUpRemovedFiles does not clobber a concurrent update on stale in-memory state", async () => {
+    const tmpDir = await fs.promises.mkdtemp(
+      path.join(os.tmpdir(), "seatbelt-cleanup-race-"),
+    )
+    const seatbeltFilename = path.join(tmpDir, "eslint.seatbelt.tsv")
+    const existingSrc = path.join(tmpDir, "existing.ts")
+    fs.writeFileSync(existingSrc, "")
+    fs.writeFileSync(
+      seatbeltFilename,
+      [
+        `${JSON.stringify("existing.ts")}\t${JSON.stringify("rule1")}\t1\n`,
+        `${JSON.stringify("gone.ts")}\t${JSON.stringify("rule1")}\t1\n`,
+      ].join(""),
+    )
+
+    const args: SeatbeltArgs = {
+      root: tmpDir,
+      seatbeltFile: seatbeltFilename,
+      keepRules: new Set(),
+      allowIncreaseRules: "all",
+      frozen: false,
+      disable: false,
+      quiet: false,
+      threadsafe: true,
+      verbose: false,
+    }
+
+    const staler = SeatbeltFile.openSync(seatbeltFilename)
+
+    const writer = SeatbeltFile.openSync(seatbeltFilename)
+    writer.updateFileMaxErrors(args, existingSrc, new Map([["rule1", 5]]))
+
+    const { removedFiles } = staler.cleanUpRemovedFiles(args)
+    assert.strictEqual(removedFiles, 1)
+
+    const final = SeatbeltFile.readSync(seatbeltFilename)
+    assert.strictEqual(final.getMaxErrors(existingSrc)?.get("rule1"), 5)
+    assert.strictEqual(final.getMaxErrors(path.join(tmpDir, "gone.ts")), undefined)
+
+    await fs.promises.rm(tmpDir, { recursive: true })
+  })
+
   test("toJSON() and fromJSON() roundtrip", () => {
     const file = SeatbeltFile.fromJSON({
       filename: "/test/eslint.seatbelt.tsv",

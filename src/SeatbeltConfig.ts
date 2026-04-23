@@ -1,6 +1,7 @@
 import type { RuleId } from "./SeatbeltFile"
 import { name } from "../package.json"
 import path from "node:path"
+import { isMainThread } from "node:worker_threads"
 import { findRepoRoot } from "./repoIntegration"
 
 export const SEATBELT_FILE_NAME = "eslint.seatbelt.tsv"
@@ -303,7 +304,8 @@ export interface SeatbeltConfig {
    * When enabled, seatbelt creates temporary lock files to serialize updates to
    * the seatbelt file. This comes at a small performance cost.
    *
-   * This is enabled by default when run with Jest (environment variable `JEST_WORKER_ID` is set).
+   * This is enabled by default when run with Jest (environment variable `JEST_WORKER_ID` is set)
+   * or inside a Node `worker_threads` worker (e.g. ESLint `--concurrency`).
    *
    * It can also be set with environment variable `SEATBELT_THREADSAFE`:
    *
@@ -400,6 +402,14 @@ export const SeatbeltConfig = {
         true,
       )
     }
+    // ESLint --concurrency (v9.34+) lint in parallel inside Node worker_threads of the same process
+    if (!isMainThread) {
+      config.threadsafe = true
+      log?.(
+        `${padVarName("worker_threads")} config.threadsafe defaults to`,
+        true,
+      )
+    }
     return config
   },
 
@@ -418,7 +428,9 @@ export const SeatbeltConfig = {
     }
     const seatbeltFile = env[SEATBELT_FILE]
     if (seatbeltFile) {
-      const rootRelative = path.isAbsolute(seatbeltFile) ? seatbeltFile : path.join(config.pwd, seatbeltFile)
+      const rootRelative = path.isAbsolute(seatbeltFile)
+        ? seatbeltFile
+        : path.join(config.pwd, seatbeltFile)
       config.seatbeltFile = rootRelative
       log?.(`${padVarName(SEATBELT_FILE)} config.seatbeltFile =`, rootRelative)
     }

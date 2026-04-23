@@ -53,7 +53,9 @@ export const SeatbeltProcessor: Linter.Processor = {
     }
 
     const seatbeltFile = pluginGlobals.getSeatbeltFile(args.seatbeltFile)
-    if (args.threadsafe || !pluginGlobals.isEslintCli()) {
+    // Refresh the cached copy for long-lived processes (editors).
+    // The threadsafe case re-reads under lock inside updateFileMaxErrors.
+    if (!pluginGlobals.isEslintCli()) {
       seatbeltFile.readSync()
     }
     const ruleToErrorCount = countRuleIds(messages)
@@ -257,25 +259,14 @@ function maybeWriteStateUpdate(
   if (args.disable) {
     return
   }
-  if (args.threadsafe) {
-    // TODO: Implement locking
-    // For now just refresh the file.
-    stateFile.readSync()
-  }
 
-  const ruleToMaxErrorCount = stateFile.getMaxErrors(filename)
-  const { removedRules } = stateFile.updateMaxErrors(
-    filename,
-    args,
-    ruleToErrorCount,
-  )
-  if (!args.frozen) {
-    stateFile.flushChanges()
-  } else if (removedRules && removedRules.size > 0) {
-    // We didn't actually update the state file in this case.
-    // We need to add an original error message about the inconsistent state.
+  const { ruleToMaxErrorCountBefore, removedRules } =
+    stateFile.updateFileMaxErrors(args, filename, ruleToErrorCount)
+
+  if (args.frozen && removedRules.size > 0) {
+    // State file wasn't updated. Surface the inconsistency as lint messages.
     return Array.from(removedRules).map((ruleId) => {
-      const maxErrorCount = ruleToMaxErrorCount?.get(ruleId)
+      const maxErrorCount = ruleToMaxErrorCountBefore?.get(ruleId)
       if (maxErrorCount === undefined) {
         throw new Error(
           `${name} bug: maxErrorCount not found for removed frozen rule ${ruleId}`,

@@ -10,6 +10,9 @@ import {
 } from "./SeatbeltConfig"
 import { name } from "../package.json"
 import { appendErrorContext, isErrno } from "./errorHanding"
+import { FileLock } from "./FileLock"
+
+const LOCK_TIMEOUT_MS = 30_000
 
 export type SourceFileName = string
 export type RuleId = string
@@ -288,6 +291,60 @@ export class SeatbeltFile {
     }
 
     return { removedRules, increasedRulesCount, decreasedRulesCount }
+  }
+
+  /** Atomic read -> apply delta -> write. Takes an exclusive file lock when `args.threadsafe`. */
+  updateFileMaxErrors(
+    args: SeatbeltArgs,
+    filename: SourceFileName,
+    ruleToErrorCount: ReadonlyMap<RuleId, number>,
+  ): {
+    ruleToMaxErrorCountBefore: ReadonlyMap<RuleId, number> | undefined
+    removedRules: Set<RuleId>
+    increasedRulesCount: number
+    decreasedRulesCount: number
+  } {
+    return this.withOptionalLock(args, () => {
+      const before = this.getMaxErrors(filename)
+      const ruleToMaxErrorCountBefore = before ? new Map(before) : undefined
+      const result = this.updateMaxErrors(filename, args, ruleToErrorCount)
+      if (!args.frozen) {
+        this.flushChanges()
+      }
+      return { ruleToMaxErrorCountBefore, ...result }
+    })
+  }
+
+  /** Drop entries whose source file no longer exists. Takes an exclusive file lock when `args.threadsafe`. */
+  cleanUpRemovedFiles(args: SeatbeltArgs): { removedFiles: number } {
+    return this.withOptionalLock(args, () => {
+      let removedFiles = 0
+      for (const filename of Array.from(this.filenames())) {
+        if (!fs.existsSync(filename)) {
+          if (this.removeFile(filename, args)) {
+            removedFiles++
+          }
+        }
+      }
+      if (!args.frozen) {
+        this.flushChanges()
+      }
+      return { removedFiles }
+    })
+  }
+
+  private withOptionalLock<T>(args: SeatbeltArgs, fn: () => T): T {
+    if (!args.threadsafe) {
+      return fn()
+    }
+    const lock = new FileLock(`${this.filename}.lock`)
+    lock.waitLock(LOCK_TIMEOUT_MS)
+    try {
+      this.readSync()
+      return fn()
+    } finally {
+      lock.unlock()
+    }
   }
 
   toDataString(): string {

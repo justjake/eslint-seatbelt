@@ -1,5 +1,7 @@
 import { test, describe } from "node:test"
 import assert from "node:assert"
+import * as path from "node:path"
+import { Worker } from "node:worker_threads"
 import {
   SeatbeltConfig,
   SeatbeltArgs,
@@ -35,4 +37,32 @@ describe("SeatbeltConfig", () => {
     const args = SeatbeltArgs.fromConfig({ quiet: true })
     assert.strictEqual(args.quiet, true)
   })
+
+  test("fromFallbackEnv() leaves threadsafe undefined on the main thread", () => {
+    const config = SeatbeltConfig.fromFallbackEnv({})
+    assert.strictEqual(config.threadsafe, undefined)
+  })
+
+  test("fromFallbackEnv() defaults threadsafe to true inside a worker_thread", async () => {
+    const threadsafe = await runInWorker<boolean | undefined>(`
+      const { SeatbeltConfig } = require(${JSON.stringify(path.resolve(__dirname, "SeatbeltConfig"))});
+      const config = SeatbeltConfig.fromFallbackEnv({});
+      require("node:worker_threads").parentPort.postMessage(config.threadsafe);
+    `)
+    assert.strictEqual(threadsafe, true)
+  })
 })
+
+function runInWorker<T>(script: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(script, {
+      eval: true,
+      execArgv: ["--require", "tsx/cjs"],
+    })
+    worker.once("message", (value: T) => {
+      resolve(value)
+      worker.terminate()
+    })
+    worker.once("error", reject)
+  })
+}
