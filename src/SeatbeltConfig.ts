@@ -263,28 +263,19 @@ export interface SeatbeltConfig {
    */
   disable?: boolean
   /**
-   * When `true`, seatbelt still reads the seatbelt file and validates error
-   * counts (so increases are still reported as lint errors), but never writes
-   * updates back to disk. Lint runs are pure — the worktree stays clean even
-   * after fixing baselined errors.
+   * When `true`, seatbelt validates error counts (still reporting increases)
+   * but never writes the seatbelt file. Keeps the worktree clean in local /
+   * editor runs; expect an authoritative updater (e.g. post-merge CI) to run
+   * with `readOnly: false`.
    *
-   * Useful for local development and editor integrations, where a rewritten
-   * seatbelt file would create surprising "dirty" diffs in the dev's
-   * worktree. Authoritative updates to the baseline are expected to come from
-   * a separate process (e.g. a CI job on the default branch) running with
-   * `readOnly: false`.
+   * Unlike `frozen`, does not turn decreases into errors. If both are set,
+   * `frozen` messaging is preserved and no write occurs.
    *
-   * Unlike `frozen`, `readOnly` does not turn decreases into errors — it
-   * simply skips the write. If both `frozen` and `readOnly` are set, `frozen`
-   * messaging is preserved and no write occurs.
+   * `SEATBELT_INCREASE` overrides this so intentional loosening is persisted.
    *
-   * Defaults to `false` (write enabled) for backward compatibility.
+   * Defaults to `false`.
    *
-   * The `SEATBELT_INCREASE` environment variable overrides `readOnly` so the
-   * new baseline can be persisted when a developer intentionally loosens a
-   * rule.
-   *
-   * This can be set with the `SEATBELT_READ_ONLY` environment variable:
+   * Set via `SEATBELT_READ_ONLY` env var:
    *
    * ```bash
    * SEATBELT_READ_ONLY=1 eslint
@@ -490,8 +481,7 @@ export const SeatbeltConfig = {
         `${padVarName(SEATBELT_INCREASE)} config.allowIncreaseRules =`,
         increase,
       )
-      // SEATBELT_INCREASE overrides readOnly so intentional loosening can be
-      // persisted to the seatbelt file.
+      // SEATBELT_INCREASE overrides readOnly so loosening is persisted.
       config.readOnly = false
       log?.(
         `${padVarName(SEATBELT_INCREASE)} overrides config.readOnly =`,

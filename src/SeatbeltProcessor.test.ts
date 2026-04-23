@@ -210,8 +210,7 @@ describe("maybeWriteStateUpdate", () => {
     const originalFlush = file.flushChanges.bind(file)
     file.flushChanges = () => {
       flushed++
-      // Don't actually write to disk during tests. Return the same shape as
-      // flushChanges would on a real updated file so callers see "updated: true".
+      // Skip disk I/O; mirror flushChanges() return shape.
       const wasChanged = file.changed
       file.changed = false
       return { updated: wasChanged }
