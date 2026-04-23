@@ -409,7 +409,6 @@ This project uses `pnpm` for package management.
 
 ### Improvement ideas
 
-- [ ] Finish SEATBELT_THREADSAFE implementation
 - [ ] Set SEATBELT_DISABLE=1 during git merge/rebase events
 - [ ] Add SEATBELT_DISABLE_IN_EDITOR config option
 - [ ] Integration tests
