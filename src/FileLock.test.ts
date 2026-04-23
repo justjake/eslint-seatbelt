@@ -83,6 +83,8 @@ describe("FileLock", () => {
   test("waitLock reclaims a lock left behind by a crashed child process", () => {
     const lockPath = tmpLockPath("crashed-child")
 
+    // SIGKILL so our exit/signal cleanup hooks can't run; the child leaves the
+    // lock file behind exactly like a real crash would.
     const script = `
       const { FileLock } = require(${JSON.stringify(path.resolve(__dirname, "FileLock"))});
       const lock = new FileLock(process.argv[1]);
@@ -90,14 +92,18 @@ describe("FileLock", () => {
         console.error("child: failed to acquire lock");
         process.exit(2);
       }
-      process.exit(0);
+      process.kill(process.pid, "SIGKILL");
     `
 
-    execFileSync(
-      process.execPath,
-      ["--require", "tsx/cjs", "-e", script, "--", lockPath],
-      { stdio: "pipe" },
-    )
+    try {
+      execFileSync(
+        process.execPath,
+        ["--require", "tsx/cjs", "-e", script, "--", lockPath],
+        { stdio: "pipe" },
+      )
+    } catch {
+      // Expected: SIGKILL gives a non-zero exit status.
+    }
 
     assert.strictEqual(
       fs.existsSync(lockPath),
