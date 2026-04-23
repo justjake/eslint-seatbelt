@@ -290,6 +290,25 @@ export class SeatbeltFile {
     return { removedRules, increasedRulesCount, decreasedRulesCount }
   }
 
+  /** Atomic read -> apply delta -> write. Takes an exclusive file lock when `args.threadsafe`. */
+  updateFileMaxErrors(
+    args: SeatbeltArgs,
+    filename: SourceFileName,
+    ruleToErrorCount: ReadonlyMap<RuleId, number>,
+  ): {
+    ruleToMaxErrorCountBefore: ReadonlyMap<RuleId, number> | undefined
+    removedRules: Set<RuleId>
+    increasedRulesCount: number
+    decreasedRulesCount: number
+  } {
+    // TODO(threadsafe): read-latest-under-lock, merge the delta in
+    // `ruleToErrorCount`, flushChanges, release.
+    void args
+    void filename
+    void ruleToErrorCount
+    throw new Error("SeatbeltFile.updateFileMaxErrors not implemented")
+  }
+
   toDataString(): string {
     const lines: string[] = []
     this.data.forEach((fileState, filename) => {
