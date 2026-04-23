@@ -315,6 +315,15 @@ export class SeatbeltFile {
     })
   }
 
+  /**
+   * Drop any entries whose source file no longer exists on disk. Takes an
+   * exclusive file lock when `args.threadsafe`.
+   */
+  cleanUpRemovedFiles(args: SeatbeltArgs): { removedFiles: number } {
+    void args
+    throw new Error("SeatbeltFile.cleanUpRemovedFiles not implemented")
+  }
+
   private withOptionalLock<T>(args: SeatbeltArgs, fn: () => T): T {
     if (!args.threadsafe) {
       return fn()
