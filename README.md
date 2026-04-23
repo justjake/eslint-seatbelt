@@ -89,6 +89,37 @@ module.exports = {
 
 1. `SEATBELT_FROZEN=1 eslint` or `CI=1 eslint`
 
+### Keep the worktree clean during local development (auto-ratchet workflow)
+
+If you don't want developers to hand-commit changes to `eslint.seatbelt.tsv`
+every time they fix a baselined error, use `SEATBELT_READ_ONLY=1` locally and
+let a post-merge job ratchet the baseline on the default branch.
+
+1. Local / editor runs: `SEATBELT_READ_ONLY=1 eslint`
+   - Counts go down → lint passes, `eslint.seatbelt.tsv` is NOT rewritten.
+   - Counts go up (no `SEATBELT_INCREASE`) → lint fails as normal.
+   - `SEATBELT_INCREASE=<rule>` overrides `SEATBELT_READ_ONLY` so the baseline
+     gets persisted when a developer intentionally loosens a rule.
+2. PR CI: `CI=1 eslint` (frozen). Any drift in `eslint.seatbelt.tsv` fails
+   the build; ephemeral writes during the run are discarded with the runner.
+3. On push to default branch: run `eslint` (no flags) in a bot job. If the
+   lint run produces a diff to `eslint.seatbelt.tsv`, commit and push it.
+
+Example ESLint config that enables read-only mode outside CI:
+
+```js
+// in eslint.config.js
+export default [
+  {
+    settings: {
+      seatbelt: {
+        readOnly: !process.env.CI,
+      },
+    },
+  },
+]
+```
+
 ### Introduce ESLint to an existing codebase
 
 eslint-seatbelt makes it easy to introduce ESLint to an existing unlinted codebase.
@@ -336,6 +367,41 @@ export interface SeatbeltConfig {
    * ]
    */
   disable?: boolean
+  /**
+   * When `true`, seatbelt validates error counts (still reporting increases)
+   * but never writes the seatbelt file. Keeps the worktree clean in local /
+   * editor runs; expect an authoritative updater (e.g. post-merge CI) to run
+   * with `readOnly: false`.
+   *
+   * Unlike `frozen`, does not turn decreases into errors. If both are set,
+   * `frozen` messaging is preserved and no write occurs.
+   *
+   * `SEATBELT_INCREASE` overrides this so intentional loosening is persisted.
+   *
+   * Defaults to `false`.
+   *
+   * Set via `SEATBELT_READ_ONLY` env var:
+   *
+   * ```bash
+   * SEATBELT_READ_ONLY=1 eslint
+   * ```
+   *
+   * Or in ESLint config:
+   *
+   * ```js
+   * // in eslint.config.js
+   * const config = [
+   *   {
+   *     settings: {
+   *       seatbelt: {
+   *         readOnly: !process.env.CI,
+   *       }
+   *     }
+   *   }
+   * ]
+   * ```
+   */
+  readOnly?: boolean
   /**
    * By default seatbelt assumes that only one ESLint process will read and
    * write to the seatbelt file at a time.

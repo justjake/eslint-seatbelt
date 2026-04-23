@@ -248,7 +248,7 @@ function countRuleIds(messages: Linter.LintMessage[]): Map<RuleId, number> {
   return ruleToErrorCount
 }
 
-function maybeWriteStateUpdate(
+export function maybeWriteStateUpdate(
   args: SeatbeltArgs,
   stateFile: SeatbeltFile,
   filename: string,
@@ -269,9 +269,9 @@ function maybeWriteStateUpdate(
     args,
     ruleToErrorCount,
   )
-  if (!args.frozen) {
+  if (!args.frozen && !args.readOnly) {
     stateFile.flushChanges()
-  } else if (removedRules && removedRules.size > 0) {
+  } else if (args.frozen && removedRules && removedRules.size > 0) {
     // We didn't actually update the state file in this case.
     // We need to add an original error message about the inconsistent state.
     return Array.from(removedRules).map((ruleId) => {

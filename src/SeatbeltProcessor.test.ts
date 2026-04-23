@@ -3,7 +3,7 @@ import assert from "node:assert"
 import type { Linter } from "eslint"
 import { SeatbeltFile } from "./SeatbeltFile"
 import type { SeatbeltArgs } from "./SeatbeltConfig"
-import { transformMessages } from "./SeatbeltProcessor"
+import { transformMessages, maybeWriteStateUpdate } from "./SeatbeltProcessor"
 
 function makeArgs(overrides: Partial<SeatbeltArgs> = {}): SeatbeltArgs {
   return {
@@ -14,6 +14,7 @@ function makeArgs(overrides: Partial<SeatbeltArgs> = {}): SeatbeltArgs {
     frozen: false,
     disable: false,
     quiet: false,
+    readOnly: false,
     threadsafe: false,
     verbose: false,
     ...overrides,
@@ -199,5 +200,89 @@ describe("transformMessages", () => {
     assert.strictEqual(result.length, 1)
     assert.strictEqual(result[0].severity, 2)
     assert.strictEqual(result[0].message, "Original: some-other-rule")
+  })
+})
+
+describe("maybeWriteStateUpdate", () => {
+  function makeFileWithSpy(data: Record<string, Record<string, number>>) {
+    const file = makeSeatbeltFile(data)
+    let flushed = 0
+    const originalFlush = file.flushChanges.bind(file)
+    file.flushChanges = () => {
+      flushed++
+      // Skip disk I/O; mirror flushChanges() return shape.
+      const wasChanged = file.changed
+      file.changed = false
+      return { updated: wasChanged }
+    }
+    return { file, getFlushCount: () => flushed, originalFlush }
+  }
+
+  test("writes when counts decrease and readOnly is false", () => {
+    const { file, getFlushCount } = makeFileWithSpy({
+      "src/file.ts": { "no-console": 5 },
+    })
+    maybeWriteStateUpdate(
+      makeArgs(),
+      file,
+      "src/file.ts",
+      new Map([["no-console", 2]]),
+    )
+    assert.strictEqual(getFlushCount(), 1)
+  })
+
+  test("skips flushChanges when readOnly is true (counts decrease)", () => {
+    const { file, getFlushCount } = makeFileWithSpy({
+      "src/file.ts": { "no-console": 5 },
+    })
+    const extra = maybeWriteStateUpdate(
+      makeArgs({ readOnly: true }),
+      file,
+      "src/file.ts",
+      new Map([["no-console", 2]]),
+    )
+    assert.strictEqual(getFlushCount(), 0)
+    assert.strictEqual(extra, undefined)
+  })
+
+  test("skips flushChanges when readOnly is true (counts equal)", () => {
+    const { file, getFlushCount } = makeFileWithSpy({
+      "src/file.ts": { "no-console": 2 },
+    })
+    maybeWriteStateUpdate(
+      makeArgs({ readOnly: true }),
+      file,
+      "src/file.ts",
+      new Map([["no-console", 2]]),
+    )
+    assert.strictEqual(getFlushCount(), 0)
+  })
+
+  test("frozen + readOnly: skips flushChanges (frozen takes precedence)", () => {
+    const { file, getFlushCount } = makeFileWithSpy({
+      "src/file.ts": { "no-console": 5 },
+    })
+    const extra = maybeWriteStateUpdate(
+      makeArgs({ readOnly: true, frozen: true, keepRules: "all" }),
+      file,
+      "src/file.ts",
+      new Map([["no-console", 2]]),
+    )
+    assert.strictEqual(getFlushCount(), 0)
+    assert.strictEqual(extra, undefined)
+  })
+
+  test("disable short-circuits readOnly", () => {
+    const { file, getFlushCount } = makeFileWithSpy({
+      "src/file.ts": { "no-console": 5 },
+    })
+    const extra = maybeWriteStateUpdate(
+      makeArgs({ disable: true, readOnly: true }),
+      file,
+      "src/file.ts",
+      new Map([["no-console", 2]]),
+    )
+    assert.strictEqual(getFlushCount(), 0)
+    assert.strictEqual(extra, undefined)
   })
 })

@@ -55,6 +55,11 @@ export const SeatbeltConfigSchema = {
         "Completely disable seatbelt error processing for a lint run while leaving it otherwise configured.\n\nThis can be set with the `SEATBELT_DISABLE` environment variable.\n\n```bash\nSEATBELT_DISABLE=1 eslint\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        disable: true,\n      }\n    }\n  }\n]\n```",
       type: "boolean",
     },
+    readOnly: {
+      description:
+        "When `true`, seatbelt validates error counts (still reporting increases)\nbut never writes the seatbelt file. Keeps the worktree clean in local /\neditor runs.\n\nUnlike `frozen`, does not turn decreases into errors. If both are set,\n`frozen` messaging is preserved and no write occurs.\n\n`SEATBELT_INCREASE` overrides this so intentional loosening is persisted.\n\nDefaults to `false`.\n\nSet via `SEATBELT_READ_ONLY` env var:\n\n```bash\nSEATBELT_READ_ONLY=1 eslint\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        readOnly: !process.env.CI,\n      }\n    }\n  }\n]\n```",
+      type: "boolean",
+    },
     quiet: {
       description:
         'Suppress seatbelt\'s informational warning messages (e.g. "tend the garden",\n"thank you for fixing"). When enabled, seatbelt still downgrades errors to\nwarnings and updates the seatbelt file, but the warning messages are not\nemitted as ESLint results. Over-limit errors and frozen-mode warnings are\nalways preserved.\n\nThis is useful when seatbelt warnings create noise in CI logs or editor\nintegrations.\n\nThis can be set with the `SEATBELT_QUIET` environment variable.\n\n```bash\nSEATBELT_QUIET=1 eslint\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        quiet: true,\n      }\n    }\n  }\n]\n```',
