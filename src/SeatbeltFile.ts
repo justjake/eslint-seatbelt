@@ -320,8 +320,20 @@ export class SeatbeltFile {
    * exclusive file lock when `args.threadsafe`.
    */
   cleanUpRemovedFiles(args: SeatbeltArgs): { removedFiles: number } {
-    void args
-    throw new Error("SeatbeltFile.cleanUpRemovedFiles not implemented")
+    return this.withOptionalLock(args, () => {
+      let removedFiles = 0
+      for (const filename of Array.from(this.filenames())) {
+        if (!fs.existsSync(filename)) {
+          if (this.removeFile(filename, args)) {
+            removedFiles++
+          }
+        }
+      }
+      if (!args.frozen) {
+        this.flushChanges()
+      }
+      return { removedFiles }
+    })
   }
 
   private withOptionalLock<T>(args: SeatbeltArgs, fn: () => T): T {

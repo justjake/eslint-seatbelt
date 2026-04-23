@@ -14,7 +14,6 @@ import {
 } from "./SeatbeltConfig"
 import { SeatbeltFile } from "./SeatbeltFile"
 import { name, version } from "../package.json"
-import fs from "node:fs"
 
 let ANY_CONFIG_DISABLED = false
 let LAST_VERBOSE_ARGS: SeatbeltArgs | undefined
@@ -252,15 +251,8 @@ function handleEslintCliExit(_runContext: RunContext) {
 function cleanUpRemovedFiles() {
   for (const args of CLI_ARGS) {
     const seatbeltFile = getSeatbeltFile(args.seatbeltFile)
-    // TODO: args.threadsafe
-    seatbeltFile.readSync()
-    for (const filename of seatbeltFile.filenames()) {
-      if (!fs.existsSync(filename)) {
-        seatbeltFile.removeFile(filename, args)
-        incrementStat("removedFiles")
-      }
-    }
-    seatbeltFile.writeSync()
+    const { removedFiles } = seatbeltFile.cleanUpRemovedFiles(args)
+    incrementStat("removedFiles", removedFiles)
   }
 }
 

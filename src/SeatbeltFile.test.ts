@@ -146,9 +146,16 @@ describe("SeatbeltFile", () => {
     const seatbeltFilename = path.join(tmpDir, "eslint.seatbelt.tsv")
     const existingSrc = path.join(tmpDir, "existing.ts")
     fs.writeFileSync(existingSrc, "")
+    // Seed two entries: existing.ts (file present on disk) and gone.ts (file
+    // missing). The staler's cleanup will want to drop gone.ts, forcing it
+    // down the write path where a stale in-memory existing.ts count could
+    // clobber the writer's update.
     fs.writeFileSync(
       seatbeltFilename,
-      `${JSON.stringify("existing.ts")}\t${JSON.stringify("rule1")}\t1\n`,
+      [
+        `${JSON.stringify("existing.ts")}\t${JSON.stringify("rule1")}\t1\n`,
+        `${JSON.stringify("gone.ts")}\t${JSON.stringify("rule1")}\t1\n`,
+      ].join(""),
     )
 
     const args: SeatbeltArgs = {
@@ -163,20 +170,21 @@ describe("SeatbeltFile", () => {
       verbose: false,
     }
 
-    // Staler: opens the file and then sits on stale in-memory state.
     const staler = SeatbeltFile.openSync(seatbeltFilename)
 
-    // Writer: simulates a concurrent process landing an update to disk.
+    // Writer simulates a concurrent process landing an update to disk.
     const writer = SeatbeltFile.openSync(seatbeltFilename)
     writer.updateFileMaxErrors(args, existingSrc, new Map([["rule1", 5]]))
 
-    // Now staler runs cleanup. existing.ts is still present, so nothing should
-    // be removed; but without locking + fresh read, staler would rewrite its
-    // stale {rule1: 1} over the writer's {rule1: 5}.
-    staler.cleanUpRemovedFiles(args)
+    // Now staler runs cleanup. It must drop gone.ts, but under threadsafe it
+    // also has to re-read under the lock so existing.ts's fresh {rule1: 5}
+    // round-trips through its write.
+    const { removedFiles } = staler.cleanUpRemovedFiles(args)
+    assert.strictEqual(removedFiles, 1)
 
     const final = SeatbeltFile.readSync(seatbeltFilename)
     assert.strictEqual(final.getMaxErrors(existingSrc)?.get("rule1"), 5)
+    assert.strictEqual(final.getMaxErrors(path.join(tmpDir, "gone.ts")), undefined)
 
     await fs.promises.rm(tmpDir, { recursive: true })
   })
