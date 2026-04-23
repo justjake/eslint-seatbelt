@@ -259,19 +259,18 @@ describe("maybeWriteStateUpdate", () => {
     assert.strictEqual(getFlushCount(), 0)
   })
 
-  test("frozen + readOnly: still skips flush, still emits frozen messages for removed rules", () => {
+  test("frozen + readOnly: skips flushChanges (frozen takes precedence)", () => {
     const { file, getFlushCount } = makeFileWithSpy({
       "src/file.ts": { "no-console": 5 },
     })
     const extra = maybeWriteStateUpdate(
-      makeArgs({ readOnly: true, frozen: true }),
+      makeArgs({ readOnly: true, frozen: true, keepRules: "all" }),
       file,
       "src/file.ts",
-      new Map(),
+      new Map([["no-console", 2]]),
     )
     assert.strictEqual(getFlushCount(), 0)
-    assert.ok(Array.isArray(extra) && extra.length >= 1)
-    assert.ok(extra[0].message.includes("SEATBELT_FROZEN"))
+    assert.strictEqual(extra, undefined)
   })
 
   test("disable short-circuits readOnly", () => {
