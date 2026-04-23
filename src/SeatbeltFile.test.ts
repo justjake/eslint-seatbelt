@@ -146,10 +146,6 @@ describe("SeatbeltFile", () => {
     const seatbeltFilename = path.join(tmpDir, "eslint.seatbelt.tsv")
     const existingSrc = path.join(tmpDir, "existing.ts")
     fs.writeFileSync(existingSrc, "")
-    // Seed two entries: existing.ts (file present on disk) and gone.ts (file
-    // missing). The staler's cleanup will want to drop gone.ts, forcing it
-    // down the write path where a stale in-memory existing.ts count could
-    // clobber the writer's update.
     fs.writeFileSync(
       seatbeltFilename,
       [
@@ -172,13 +168,9 @@ describe("SeatbeltFile", () => {
 
     const staler = SeatbeltFile.openSync(seatbeltFilename)
 
-    // Writer simulates a concurrent process landing an update to disk.
     const writer = SeatbeltFile.openSync(seatbeltFilename)
     writer.updateFileMaxErrors(args, existingSrc, new Map([["rule1", 5]]))
 
-    // Now staler runs cleanup. It must drop gone.ts, but under threadsafe it
-    // also has to re-read under the lock so existing.ts's fresh {rule1: 5}
-    // round-trips through its write.
     const { removedFiles } = staler.cleanUpRemovedFiles(args)
     assert.strictEqual(removedFiles, 1)
 

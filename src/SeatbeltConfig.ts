@@ -304,7 +304,8 @@ export interface SeatbeltConfig {
    * When enabled, seatbelt creates temporary lock files to serialize updates to
    * the seatbelt file. This comes at a small performance cost.
    *
-   * This is enabled by default when run with Jest (environment variable `JEST_WORKER_ID` is set).
+   * This is enabled by default when run with Jest (environment variable `JEST_WORKER_ID` is set)
+   * or inside a Node `worker_threads` worker (e.g. ESLint `--concurrency`).
    *
    * It can also be set with environment variable `SEATBELT_THREADSAFE`:
    *

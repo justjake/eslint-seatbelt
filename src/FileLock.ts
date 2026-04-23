@@ -1,11 +1,4 @@
-import {
-  openSync,
-  writeSync,
-  closeSync,
-  readFileSync,
-  constants,
-  rmSync,
-} from "node:fs"
+import { openSync, writeSync, closeSync, readFileSync, constants, rmSync } from "node:fs"
 import { isErrno } from "./errorHanding"
 const { O_CREAT, O_EXCL, O_RDWR } = constants
 
@@ -13,6 +6,8 @@ const waitBuffer = new Int32Array(new SharedArrayBuffer(4))
 
 const heldLocks = new Set<FileLock>()
 let cleanupHooksInstalled = false
+
+const SIGNAL_EXIT_CODES = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129 } as const
 
 function installCleanupHooks() {
   if (cleanupHooksInstalled) return
@@ -23,16 +18,16 @@ function installCleanupHooks() {
       try {
         lock.unlock()
       } catch {
-        // Best-effort; we're on our way out anyway.
+        // On our way out; can't do much about it.
       }
     }
   }
 
   process.on("exit", release)
-  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+  for (const signal of Object.keys(SIGNAL_EXIT_CODES) as (keyof typeof SIGNAL_EXIT_CODES)[]) {
     process.on(signal, () => {
       release()
-      process.exit(128 + (signal === "SIGINT" ? 2 : signal === "SIGTERM" ? 15 : 1))
+      process.exit(SIGNAL_EXIT_CODES[signal])
     })
   }
 }
@@ -67,9 +62,7 @@ export class FileLock {
           attemptedRecovery = true
           continue
         }
-        throw new Error(
-          `Timed out waiting for lock on ${this.filename} after ${timeoutMs}ms`,
-        )
+        throw new Error(`Timed out waiting for lock on ${this.filename}`)
       }
       Atomics.wait(waitBuffer, 0, 0, 1)
     }
@@ -100,11 +93,6 @@ export class FileLock {
     }
   }
 
-  /**
-   * If the lock file exists but its recorded pid is no longer alive, remove it
-   * so a subsequent tryLock can succeed. Returns true if a stale file was
-   * removed.
-   */
   private reclaimIfStale(): boolean {
     let contents: string
     try {

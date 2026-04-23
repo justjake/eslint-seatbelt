@@ -53,9 +53,8 @@ export const SeatbeltProcessor: Linter.Processor = {
     }
 
     const seatbeltFile = pluginGlobals.getSeatbeltFile(args.seatbeltFile)
-    // For non-CLI runs (e.g. editors, long-lived processes) refresh the cached
-    // in-memory copy so we don't miss on-disk edits since last lint. The
-    // threadsafe case is handled under lock inside updateFileMaxErrors.
+    // Refresh the cached copy for long-lived processes (editors).
+    // The threadsafe case re-reads under lock inside updateFileMaxErrors.
     if (!pluginGlobals.isEslintCli()) {
       seatbeltFile.readSync()
     }

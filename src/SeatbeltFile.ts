@@ -315,10 +315,7 @@ export class SeatbeltFile {
     })
   }
 
-  /**
-   * Drop any entries whose source file no longer exists on disk. Takes an
-   * exclusive file lock when `args.threadsafe`.
-   */
+  /** Drop entries whose source file no longer exists. Takes an exclusive file lock when `args.threadsafe`. */
   cleanUpRemovedFiles(args: SeatbeltArgs): { removedFiles: number } {
     return this.withOptionalLock(args, () => {
       let removedFiles = 0
