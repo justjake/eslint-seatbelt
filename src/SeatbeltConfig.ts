@@ -401,9 +401,7 @@ export const SeatbeltConfig = {
         true,
       )
     }
-    // ESLint --concurrency (v9.34+) and any custom worker-based runner lint in
-    // parallel inside Node worker_threads of the same process. Separate V8
-    // isolates -> separate module caches -> racing SeatbeltFile writes.
+    // ESLint --concurrency (v9.34+) lint in parallel inside Node worker_threads of the same process
     if (!isMainThread) {
       config.threadsafe = true
       log?.(
@@ -429,7 +427,9 @@ export const SeatbeltConfig = {
     }
     const seatbeltFile = env[SEATBELT_FILE]
     if (seatbeltFile) {
-      const rootRelative = path.isAbsolute(seatbeltFile) ? seatbeltFile : path.join(config.pwd, seatbeltFile)
+      const rootRelative = path.isAbsolute(seatbeltFile)
+        ? seatbeltFile
+        : path.join(config.pwd, seatbeltFile)
       config.seatbeltFile = rootRelative
       log?.(`${padVarName(SEATBELT_FILE)} config.seatbeltFile =`, rootRelative)
     }
