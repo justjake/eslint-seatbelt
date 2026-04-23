@@ -57,7 +57,7 @@ export const SeatbeltConfigSchema = {
     },
     readOnly: {
       description:
-        "When `true`, seatbelt validates error counts (still reporting increases)\nbut never writes the seatbelt file. Keeps the worktree clean in local /\neditor runs; expect an authoritative updater (e.g. post-merge CI) to run\nwith `readOnly: false`.\n\nUnlike `frozen`, does not turn decreases into errors. If both are set,\n`frozen` messaging is preserved and no write occurs.\n\n`SEATBELT_INCREASE` overrides this so intentional loosening is persisted.\n\nDefaults to `false`.\n\nSet via `SEATBELT_READ_ONLY` env var:\n\n```bash\nSEATBELT_READ_ONLY=1 eslint\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        readOnly: !process.env.CI,\n      }\n    }\n  }\n]\n```",
+        "When `true`, seatbelt validates error counts (still reporting increases)\nbut never writes the seatbelt file. Keeps the worktree clean in local /\neditor runs.\n\nUnlike `frozen`, does not turn decreases into errors. If both are set,\n`frozen` messaging is preserved and no write occurs.\n\n`SEATBELT_INCREASE` overrides this so intentional loosening is persisted.\n\nDefaults to `false`.\n\nSet via `SEATBELT_READ_ONLY` env var:\n\n```bash\nSEATBELT_READ_ONLY=1 eslint\n```\n\nOr in ESLint config:\n\n```js\n// in eslint.config.js\nconst config = [\n  {\n    settings: {\n      seatbelt: {\n        readOnly: !process.env.CI,\n      }\n    }\n  }\n]\n```",
       type: "boolean",
     },
     quiet: {
