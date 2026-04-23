@@ -1,6 +1,7 @@
 import type { RuleId } from "./SeatbeltFile"
 import { name } from "../package.json"
 import path from "node:path"
+import { isMainThread } from "node:worker_threads"
 import { findRepoRoot } from "./repoIntegration"
 
 export const SEATBELT_FILE_NAME = "eslint.seatbelt.tsv"
@@ -397,6 +398,16 @@ export const SeatbeltConfig = {
       config.threadsafe = true
       log?.(
         `${padVarName("JEST_WORKER_ID")} config.threadsafe defaults to`,
+        true,
+      )
+    }
+    // ESLint --concurrency (v9.34+) and any custom worker-based runner lint in
+    // parallel inside Node worker_threads of the same process. Separate V8
+    // isolates -> separate module caches -> racing SeatbeltFile writes.
+    if (!isMainThread) {
+      config.threadsafe = true
+      log?.(
+        `${padVarName("worker_threads")} config.threadsafe defaults to`,
         true,
       )
     }
