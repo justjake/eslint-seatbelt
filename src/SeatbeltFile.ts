@@ -10,6 +10,9 @@ import {
 } from "./SeatbeltConfig"
 import { name } from "../package.json"
 import { appendErrorContext, isErrno } from "./errorHanding"
+import { FileLock } from "./FileLock"
+
+const LOCK_TIMEOUT_MS = 30_000
 
 export type SourceFileName = string
 export type RuleId = string
@@ -301,12 +304,29 @@ export class SeatbeltFile {
     increasedRulesCount: number
     decreasedRulesCount: number
   } {
-    // TODO(threadsafe): read-latest-under-lock, merge the delta in
-    // `ruleToErrorCount`, flushChanges, release.
-    void args
-    void filename
-    void ruleToErrorCount
-    throw new Error("SeatbeltFile.updateFileMaxErrors not implemented")
+    return this.withOptionalLock(args, () => {
+      const before = this.getMaxErrors(filename)
+      const ruleToMaxErrorCountBefore = before ? new Map(before) : undefined
+      const result = this.updateMaxErrors(filename, args, ruleToErrorCount)
+      if (!args.frozen) {
+        this.flushChanges()
+      }
+      return { ruleToMaxErrorCountBefore, ...result }
+    })
+  }
+
+  private withOptionalLock<T>(args: SeatbeltArgs, fn: () => T): T {
+    if (!args.threadsafe) {
+      return fn()
+    }
+    const lock = new FileLock(`${this.filename}.lock`)
+    lock.waitLock(LOCK_TIMEOUT_MS)
+    try {
+      this.readSync()
+      return fn()
+    } finally {
+      lock.unlock()
+    }
   }
 
   toDataString(): string {

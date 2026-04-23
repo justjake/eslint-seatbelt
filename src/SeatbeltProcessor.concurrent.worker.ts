@@ -23,7 +23,7 @@ const args: SeatbeltArgs = {
   root: "/",
   seatbeltFile,
   keepRules: new Set(),
-  allowIncreaseRules: new Set(),
+  allowIncreaseRules: "all",
   frozen: false,
   disable: false,
   quiet: false,
